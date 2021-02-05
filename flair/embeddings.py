@@ -5,6 +5,7 @@ from abc import abstractmethod
 from collections import Counter
 from pathlib import Path
 from typing import List, Union, Dict
+import inspect
 
 import gensim
 import numpy as np
