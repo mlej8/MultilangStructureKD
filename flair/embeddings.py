@@ -44,7 +44,7 @@ import flair
 from flair.data import Corpus
 from .nn import LockedDropout, WordDropout
 from .data import Dictionary, Token, Sentence
-from .file_utils import cached_path, open_inside_zip
+from .file_utils import cached_path, open_inside_zip, instance_lru_cache
 
 log = logging.getLogger("flair")
 
@@ -227,113 +227,62 @@ class WordEmbeddings(TokenEmbeddings):
         """
         self.embeddings = embeddings
 
-        old_base_path = (
-            "https://s3.eu-central-1.amazonaws.com/alan-nlp/resources/embeddings/"
-        )
-        base_path = (
-            "https://s3.eu-central-1.amazonaws.com/alan-nlp/resources/embeddings-v0.3/"
-        )
-        embeddings_path_v4 = (
-            "https://s3.eu-central-1.amazonaws.com/alan-nlp/resources/embeddings-v0.4/"
-        )
-        embeddings_path_v4_1 = "https://s3.eu-central-1.amazonaws.com/alan-nlp/resources/embeddings-v0.4.1/"
+        self.instance_parameters = self.get_instance_parameters(locals=locals())
+
+        hu_path: str = "https://flair.informatik.hu-berlin.de/resources/embeddings/token"
 
         cache_dir = Path("embeddings")
 
         # GLOVE embeddings
         if embeddings.lower() == "glove" or embeddings.lower() == "en-glove":
-            cached_path(f"{old_base_path}glove.gensim.vectors.npy", cache_dir=cache_dir)
-            embeddings = cached_path(
-                f"{old_base_path}glove.gensim", cache_dir=cache_dir
-            )
+            cached_path(f"{hu_path}/glove.gensim.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/glove.gensim", cache_dir=cache_dir)
 
         # TURIAN embeddings
         elif embeddings.lower() == "turian" or embeddings.lower() == "en-turian":
-            cached_path(
-                f"{embeddings_path_v4_1}turian.vectors.npy", cache_dir=cache_dir
-            )
-            embeddings = cached_path(
-                f"{embeddings_path_v4_1}turian", cache_dir=cache_dir
-            )
+            cached_path(f"{hu_path}/turian.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/turian", cache_dir=cache_dir)
 
         # KOMNINOS embeddings
         elif embeddings.lower() == "extvec" or embeddings.lower() == "en-extvec":
-            cached_path(
-                f"{old_base_path}extvec.gensim.vectors.npy", cache_dir=cache_dir
-            )
-            embeddings = cached_path(
-                f"{old_base_path}extvec.gensim", cache_dir=cache_dir
-            )
+            cached_path(f"{hu_path}/extvec.gensim.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/extvec.gensim", cache_dir=cache_dir)
+
+        # pubmed embeddings
+        elif embeddings.lower() == "pubmed" or embeddings.lower() == "en-pubmed":
+            cached_path(f"{hu_path}/pubmed_pmc_wiki_sg_1M.gensim.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/pubmed_pmc_wiki_sg_1M.gensim", cache_dir=cache_dir)
 
         # FT-CRAWL embeddings
         elif embeddings.lower() == "crawl" or embeddings.lower() == "en-crawl":
-            cached_path(
-                f"{base_path}en-fasttext-crawl-300d-1M.vectors.npy", cache_dir=cache_dir
-            )
-            embeddings = cached_path(
-                f"{base_path}en-fasttext-crawl-300d-1M", cache_dir=cache_dir
-            )
+            cached_path(f"{hu_path}/en-fasttext-crawl-300d-1M.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/en-fasttext-crawl-300d-1M", cache_dir=cache_dir)
 
         # FT-CRAWL embeddings
-        elif (
-            embeddings.lower() == "news"
-            or embeddings.lower() == "en-news"
-            or embeddings.lower() == "en"
-        ):
-            cached_path(
-                f"{base_path}en-fasttext-news-300d-1M.vectors.npy", cache_dir=cache_dir
-            )
-            embeddings = cached_path(
-                f"{base_path}en-fasttext-news-300d-1M", cache_dir=cache_dir
-            )
+        elif embeddings.lower() in ["news", "en-news", "en"]:
+            cached_path(f"{hu_path}/en-fasttext-news-300d-1M.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/en-fasttext-news-300d-1M", cache_dir=cache_dir)
 
         # twitter embeddings
-        elif embeddings.lower() == "twitter" or embeddings.lower() == "en-twitter":
-            cached_path(
-                f"{old_base_path}twitter.gensim.vectors.npy", cache_dir=cache_dir
-            )
-            embeddings = cached_path(
-                f"{old_base_path}twitter.gensim", cache_dir=cache_dir
-            )
+        elif embeddings.lower() in ["twitter", "en-twitter"]:
+            cached_path(f"{hu_path}/twitter.gensim.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/twitter.gensim", cache_dir=cache_dir)
 
         # two-letter language code wiki embeddings
         elif len(embeddings.lower()) == 2:
-            cached_path(
-                f"{embeddings_path_v4}{embeddings}-wiki-fasttext-300d-1M.vectors.npy",
-                cache_dir=cache_dir,
-            )
-            embeddings = cached_path(
-                f"{embeddings_path_v4}{embeddings}-wiki-fasttext-300d-1M",
-                cache_dir=cache_dir,
-            )
+            cached_path(f"{hu_path}/{embeddings}-wiki-fasttext-300d-1M.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/{embeddings}-wiki-fasttext-300d-1M", cache_dir=cache_dir)
 
         # two-letter language code wiki embeddings
         elif len(embeddings.lower()) == 7 and embeddings.endswith("-wiki"):
-            cached_path(
-                f"{embeddings_path_v4}{embeddings[:2]}-wiki-fasttext-300d-1M.vectors.npy",
-                cache_dir=cache_dir,
-            )
-            embeddings = cached_path(
-                f"{embeddings_path_v4}{embeddings[:2]}-wiki-fasttext-300d-1M",
-                cache_dir=cache_dir,
-            )
+            cached_path(f"{hu_path}/{embeddings[:2]}-wiki-fasttext-300d-1M.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/{embeddings[:2]}-wiki-fasttext-300d-1M", cache_dir=cache_dir)
 
         # two-letter language code crawl embeddings
         elif len(embeddings.lower()) == 8 and embeddings.endswith("-crawl"):
-            cached_path(
-                f"{embeddings_path_v4}{embeddings[:2]}-crawl-fasttext-300d-1M.vectors.npy",
-                cache_dir=cache_dir,
-            )
-            embeddings = cached_path(
-                f"{embeddings_path_v4}{embeddings[:2]}-crawl-fasttext-300d-1M",
-                cache_dir=cache_dir,
-            )
-        elif embeddings.lower().startswith('conll_'):
-            embeddings = Path(flair.cache_root)/ cache_dir / f'{embeddings.lower()}.txt'
-        elif embeddings.lower().endswith('txt'):
-            embeddings = Path(flair.cache_root)/ cache_dir / f'{embeddings}'
-        elif embeddings.lower().endswith('cc.el'):
-            embeddings = Path(flair.cache_root)/ cache_dir / f'{embeddings.lower()}.300.txt'    
+            cached_path(f"{hu_path}/{embeddings[:2]}-crawl-fasttext-300d-1M.vectors.npy", cache_dir=cache_dir)
+            embeddings = cached_path(f"{hu_path}/{embeddings[:2]}-crawl-fasttext-300d-1M", cache_dir=cache_dir)
+
         elif not Path(embeddings).exists():
             raise ValueError(
                 f'The given embeddings "{embeddings}" is not available or is not a valid path.'
@@ -345,10 +294,6 @@ class WordEmbeddings(TokenEmbeddings):
         if str(embeddings).endswith(".bin"):
             self.precomputed_word_embeddings = gensim.models.KeyedVectors.load_word2vec_format(
                 str(embeddings), binary=True
-            )
-        if str(embeddings).endswith(".txt"):
-            self.precomputed_word_embeddings = gensim.models.KeyedVectors.load_word2vec_format(
-                str(embeddings), binary=False
             )
         else:
             self.precomputed_word_embeddings = gensim.models.KeyedVectors.load(
@@ -364,14 +309,30 @@ class WordEmbeddings(TokenEmbeddings):
     def embedding_length(self) -> int:
         return self.__embedding_length
 
+    @instance_lru_cache(maxsize=10000, typed=False)
+    def get_cached_vec(self, word: str) -> torch.Tensor:
+        if word in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[word]
+        elif word.lower() in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[word.lower()]
+        elif re.sub(r"\d", "#", word.lower()) in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[
+                re.sub(r"\d", "#", word.lower())
+            ]
+        elif re.sub(r"\d", "0", word.lower()) in self.precomputed_word_embeddings:
+            word_embedding = self.precomputed_word_embeddings[
+                re.sub(r"\d", "0", word.lower())
+            ]
+        else:
+            word_embedding = np.zeros(self.embedding_length, dtype="float")
+
+        word_embedding = torch.tensor(
+            word_embedding.tolist(), device=flair.device, dtype=torch.float
+        )
+        return word_embedding
+
     def _add_embeddings_internal(self, sentences: List[Sentence]) -> List[Sentence]:
-        if hasattr(sentences, 'features'):
-            if self.name in sentences.features:
-                return sentences
-            if len(sentences)>0:
-                if self.name in sentences[0][0]._embeddings.keys():
-                    sentences = self.assign_batch_features(sentences)
-                    return sentences
+
         for i, sentence in enumerate(sentences):
 
             for token, token_idx in zip(sentence.tokens, range(len(sentence.tokens))):
@@ -381,30 +342,10 @@ class WordEmbeddings(TokenEmbeddings):
                 else:
                     word = token.get_tag(self.field).value
 
-                if word in self.precomputed_word_embeddings:
-                    word_embedding = self.precomputed_word_embeddings[word]
-                elif word.lower() in self.precomputed_word_embeddings:
-                    word_embedding = self.precomputed_word_embeddings[word.lower()]
-                elif (
-                    re.sub(r"\d", "#", word.lower()) in self.precomputed_word_embeddings
-                ):
-                    word_embedding = self.precomputed_word_embeddings[
-                        re.sub(r"\d", "#", word.lower())
-                    ]
-                elif (
-                    re.sub(r"\d", "0", word.lower()) in self.precomputed_word_embeddings
-                ):
-                    word_embedding = self.precomputed_word_embeddings[
-                        re.sub(r"\d", "0", word.lower())
-                    ]
-                else:
-                    word_embedding = np.zeros(self.embedding_length, dtype="float")
-
-                word_embedding = torch.FloatTensor(word_embedding)
+                word_embedding = self.get_cached_vec(word=word)
 
                 token.set_embedding(self.name, word_embedding)
-        if hasattr(sentences, 'features'):
-            sentences = self.assign_batch_features(sentences)
+
         return sentences
 
     def __str__(self):
