@@ -2,13 +2,14 @@
 Utilities for working with the local dataset cache. Copied from AllenNLP
 """
 from pathlib import Path
-from typing import Tuple, Optional, Sequence, cast
+from typing import Tuple, Union, Optional, Sequence, cast
 import os
 import base64
 import logging
 import shutil
 import tempfile
 import re
+import functools
 from urllib.parse import urlparse
 
 import mmap
@@ -22,16 +23,16 @@ import flair
 logger = logging.getLogger("flair")
 
 
-def load_big_file(f):
+def load_big_file(f: str) -> mmap.mmap:
     """
     Workaround for loading a big pickle file. Files over 2GB cause pickle errors on certin Mac and Windows distributions.
     :param f:
     :return:
     """
     logger.info(f"loading file {f}")
-    with open(f, "r+b") as f_in:
+    with open(f, "rb") as f_in:
         # mmap seems to be much more memory efficient
-        bf = mmap.mmap(f_in.fileno(), 0)
+        bf = mmap.mmap(f_in.fileno(), 0, access=mmap.ACCESS_READ)
         f_in.close()
     return bf
 
@@ -72,13 +73,15 @@ def filename_to_url(filename: str) -> Tuple[str, str]:
     return url_bytes.decode("utf-8"), etag
 
 
-def cached_path(url_or_filename: str, cache_dir: Path) -> Path:
+def cached_path(url_or_filename: str, cache_dir: Union[str, Path]) -> Path:
     """
     Given something that might be a URL (or might be a local path),
     determine which. If it's a URL, download the file and cache it, and
     return the path to the cached file. If it's already a local path,
     make sure the file exists and then return the path.
     """
+    if type(cache_dir) is str:
+        cache_dir = Path(cache_dir)
     dataset_cache = Path(flair.cache_root) / cache_dir
 
     parsed = urlparse(url_or_filename)
@@ -99,16 +102,69 @@ def cached_path(url_or_filename: str, cache_dir: Path) -> Path:
         )
 
 
-def unzip_file(file: Path, unzip_to: Path):
-    # unpack and write out in CoNLL column-like format
+def unzip_file(file: Union[str, Path], unzip_to: Union[str, Path]):
     from zipfile import ZipFile
 
-    with ZipFile(file, "r") as zipObj:
+    with ZipFile(Path(file), "r") as zipObj:
         # Extract all the contents of zip file in current directory
-        zipObj.extractall(unzip_to)
+        zipObj.extractall(Path(unzip_to))
 
 
-def download_file(url: str, cache_dir: Path):
+def unpack_file(file: Path, unpack_to: Path, mode: str = None, keep: bool = True):
+    """
+        Unpacks a file to the given location.
+
+        :param file Archive file to unpack
+        :param unpack_to Destination where to store the output
+        :param mode Type of the archive (zip, tar, gz, targz, rar)
+        :param keep Indicates whether to keep the archive after extraction or delete it
+    """
+    if mode == "zip" or (mode is None and str(file).endswith("zip")):
+        from zipfile import ZipFile
+
+        with ZipFile(file, "r") as zipObj:
+            # Extract all the contents of zip file in current directory
+            zipObj.extractall(unpack_to)
+
+    elif mode == "targz" or (
+            mode is None and str(file).endswith("tar.gz") or str(file).endswith("tgz")
+    ):
+        import tarfile
+
+        with tarfile.open(file, "r:gz") as tarObj:
+            tarObj.extractall(unpack_to)
+
+    elif mode == "tar" or (mode is None and str(file).endswith("tar")):
+        import tarfile
+
+        with tarfile.open(file, "r") as tarObj:
+            tarObj.extractall(unpack_to)
+
+    elif mode == "gz" or (mode is None and str(file).endswith("gz")):
+        import gzip
+
+        with gzip.open(str(file), "rb") as f_in:
+            with open(str(unpack_to), "wb") as f_out:
+                shutil.copyfileobj(f_in, f_out)
+
+    elif mode == "rar" or (mode is None and str(file).endswith("rar")):
+        import patoolib
+
+        patoolib.extract_archive(str(file), outdir=unpack_to, interactive=False)
+
+    else:
+        if mode is None:
+            raise AssertionError(f"Can't infer archive type from {file}")
+        else:
+            raise AssertionError(f"Unsupported mode {mode}")
+
+    if not keep:
+        os.remove(str(file))
+
+
+def download_file(url: str, cache_dir: Union[str, Path]):
+    if type(cache_dir) is str:
+        cache_dir = Path(cache_dir)
     cache_dir.mkdir(parents=True, exist_ok=True)
 
     filename = re.sub(r".+/", "", url)
@@ -158,7 +214,7 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
         return cache_path
 
     # make HEAD request to check ETag
-    response = requests.head(url, headers={"User-Agent": "Flair"})
+    response = requests.head(url, headers={"User-Agent": "Flair"}, allow_redirects=True)
     if response.status_code != 200:
         raise IOError(
             f"HEAD request failed for url {url} with status code {response.status_code}."
@@ -196,12 +252,12 @@ def get_from_cache(url: str, cache_dir: Path = None) -> Path:
 
 
 def open_inside_zip(
-    archive_path: str,
-    cache_dir: Path,
-    member_path: Optional[str] = None,
-    encoding: str = "utf8",
+        archive_path: str,
+        cache_dir: Union[str, Path],
+        member_path: Optional[str] = None,
+        encoding: str = "utf8",
 ) -> iter:
-    cached_archive_path = cached_path(archive_path, cache_dir=cache_dir)
+    cached_archive_path = cached_path(archive_path, cache_dir=Path(cache_dir))
     archive = zipfile.ZipFile(cached_archive_path, "r")
     if member_path is None:
         members_list = archive.namelist()
@@ -212,7 +268,7 @@ def open_inside_zip(
 
 
 def get_the_only_file_in_the_archive(
-    members_list: Sequence[str], archive_path: str
+        members_list: Sequence[str], archive_path: str
 ) -> str:
     if len(members_list) > 1:
         raise ValueError(
@@ -229,7 +285,7 @@ def get_the_only_file_in_the_archive(
 
 
 def format_embeddings_file_uri(
-    main_file_path_or_url: str, path_inside_archive: Optional[str] = None
+        main_file_path_or_url: str, path_inside_archive: Optional[str] = None
 ) -> str:
     if path_inside_archive:
         return "({})#{}".format(main_file_path_or_url, path_inside_archive)
@@ -265,3 +321,17 @@ class Tqdm:
         new_kwargs = {"mininterval": Tqdm.default_mininterval, **kwargs}
 
         return _tqdm(*args, **new_kwargs)
+
+
+def instance_lru_cache(*cache_args, **cache_kwargs):
+    def decorator(func):
+        @functools.wraps(func)
+        def create_cache(self, *args, **kwargs):
+            instance_cache = functools.lru_cache(*cache_args, **cache_kwargs)(func)
+            instance_cache = instance_cache.__get__(self, self.__class__)
+            setattr(self, func.__name__, instance_cache)
+            return instance_cache(*args, **kwargs)
+
+        return create_cache
+
+    return decorator
