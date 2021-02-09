@@ -1,6 +1,6 @@
 #! /bin/bash
 
-export CUDA_VISIBLE_DEVICES=5
+export CUDA_VISIBLE_DEVICES=6
 
 # confirm gpu availalable
 nvidia-smi
