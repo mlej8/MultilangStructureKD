@@ -7,7 +7,6 @@ embeddings:
   TransformerWordEmbeddings:
     model: bert-base-multilingual-cased
     layers: '-1'
-    pooling_operation: mean
 interpolation: 0.5
 is_teacher_list: true
 model:
