@@ -130,8 +130,8 @@ if args.test:
         overall_test=True if int(args.keep_embedding)<0 else False,
         quiet_mode=args.quiet,
         nocrf=args.nocrf,
-        debug=args.debug,
-        keep_embedding = int(args.keep_embedding),
+        # debug=args.debug,
+        # keep_embedding = int(args.keep_embedding),
     )
 elif args.parse:
 	print('Batch Size:',eval_mini_batch_size)
