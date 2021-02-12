@@ -5,13 +5,12 @@ from . import datasets as datasets
 from .data import MultiCorpus, Corpus, Dictionary
 from .list_data import ListCorpus
 from . import embeddings as Embeddings
-from .training_utils import EvaluationMetric
+from .training_utils import EvaluationMetric, store_embeddings
 from .visual.training_curves import Plotter
 import torch
 from torch.utils.data.dataset import ConcatDataset
 from flair.datasets import CoupleDataset
 from .custom_data_loader import ColumnDataLoader
-from flair.training_utils import store_embeddings
 # initialize sequence tagger
 from . import models as models
 from pathlib import Path

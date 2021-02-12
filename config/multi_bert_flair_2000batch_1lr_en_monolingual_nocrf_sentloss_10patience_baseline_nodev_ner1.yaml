@@ -3,8 +3,8 @@ ModelDistiller:
   train_with_professor: false
 anneal_factor: 2
 embeddings:
-  BertEmbeddings:
-    bert_model_or_path: bert-base-multilingual-cased
+  TransformerWordEmbeddings:
+    model: bert-base-multilingual-cased
     layers: '-1'
     pooling_operation: mean
   PooledFlairEmbeddings-1:
@@ -20,7 +20,7 @@ model:
     hidden_size: 256
     sentence_loss: true
     use_crf: false
-model_name: multi_bert_flair_2000batch_1lr_en_monolingual_nocrf_sentloss_10patience_baseline_nodev_ner1
+model_name: multi_bert_origflair_300epoch_2000batch_1lr_256hidden_en_monolingual_crf_sentloss_10patience_baseline_nodev_ner0
 ner:
   Corpus: CONLL_03
   professors:
