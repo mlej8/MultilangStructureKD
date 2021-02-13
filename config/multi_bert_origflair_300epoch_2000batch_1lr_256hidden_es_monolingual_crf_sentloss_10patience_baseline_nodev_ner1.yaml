@@ -3,10 +3,9 @@ ModelDistiller:
   train_with_professor: false
 anneal_factor: 2
 embeddings:
-  BertEmbeddings:
-    bert_model_or_path: bert-base-multilingual-cased
+  TransformerWordEmbeddings:
+    model: bert-base-multilingual-cased
     layers: '-1'
-    pooling_operation: mean
   FlairEmbeddings-1:
     model: es-forward
   FlairEmbeddings-2:
