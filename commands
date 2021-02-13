@@ -1,5 +1,10 @@
 To disable SSL certificate: export CURL_CA_BUNDLE=""
 
+./run.sh --config config/multi_bert_origflair_300epoch_2000batch_1lr_256hidden_de_monolingual_crf_sentloss_10patience_baseline_nodev_ner0.yaml
+./run.sh --config config/multi_bert_origflair_300epoch_2000batch_1lr_256hidden_en_monolingual_crf_sentloss_10patience_baseline_nodev_ner0.yaml
+./run.sh --config config/multi_bert_origflair_300epoch_2000batch_1lr_256hidden_es_monolingual_crf_sentloss_10patience_baseline_nodev_ner1.yaml
+./run.sh --config config/multi_bert_origflair_300epoch_2000batch_1lr_256hidden_nl_monolingual_crf_sentloss_10patience_baseline_nodev_ner0.yaml
+
 Posterior distillation without M-BERT finetuning
 ./run.sh --config config/multi_bert_300epoch_0.5anneal_2000batch_0.1lr_600hidden_multilingual_crf_sentloss_10patience_distill_fast_posterior_2.25temperature_old_relearn_nodev_fast_new_ner0.yaml
 
