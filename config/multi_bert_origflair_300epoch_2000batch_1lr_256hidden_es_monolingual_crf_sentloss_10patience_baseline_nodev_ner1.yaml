@@ -6,6 +6,7 @@ embeddings:
   TransformerWordEmbeddings:
     model: bert-base-multilingual-cased
     layers: '-1'
+    pooling_operation: mean
   FlairEmbeddings-1:
     model: es-forward
   FlairEmbeddings-2:
@@ -39,7 +40,7 @@ teacher_annealing: false
 train:
   learning_rate: 0.1
   max_epochs: 300
-  mini_batch_size: 2000
+  mini_batch_size: 256
   monitor_test: false
   patience: 10
   professor_interpolation: 0.5

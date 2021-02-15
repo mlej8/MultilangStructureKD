@@ -6,6 +6,7 @@ embeddings:
   TransformerWordEmbeddings:
     model: bert-base-multilingual-cased
     layers: '-1'
+    pooling_operation: mean
   FlairEmbeddings-1:
     model: nl-forward
   FlairEmbeddings-2:
